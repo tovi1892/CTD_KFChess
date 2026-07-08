@@ -1,6 +1,8 @@
 #include "GameEngine.hpp"
 
 #include "PathValidator.hpp"
+#include "Board/MovementStrategyFactory.hpp"
+#include "Systems/CollisionSystem.hpp"
 
 #include <algorithm>
 #include <cmath>
@@ -78,16 +80,16 @@ void GameEngine::initBoard(
     board = initialBoard;
 }
 long long GameEngine::calculateDurationMs(
-    const std::string&,
+    const std::string& token,
     Position src,
     Position dest)
 {
-    int distance =
-        std::max(
-            std::abs(dest.row-src.row),
-            std::abs(dest.col-src.col));
+    const auto strategy = MovementStrategyFactory::create(token);
+    int distance = std::max(
+        std::abs(dest.row - src.row),
+        std::abs(dest.col - src.col));
 
-    return distance * 1000;
+    return distance * strategy->speedMsPerSquare();
 }
 bool GameEngine::isPieceMoving(Position pos) const
 {
@@ -155,41 +157,7 @@ bool GameEngine::hasMovementConflict(
     const PendingMove& first,
     const PendingMove& second) const
 {
-    if (!first.isActive || !second.isActive)
-    {
-        return false;
-    }
-
-    if (&first == &second)
-    {
-        return false;
-    }
-
-    if (first.src == second.src ||
-        first.dest == second.dest ||
-        first.src == second.dest ||
-        first.dest == second.src)
-    {
-        return first.token[0] != second.token[0] ||
-               first.src == second.dest ||
-               first.dest == second.src;
-    }
-
-    auto firstPath = buildPath(first.src, first.dest);
-    auto secondPath = buildPath(second.src, second.dest);
-
-    for (const auto& position : firstPath)
-    {
-        for (const auto& otherPosition : secondPath)
-        {
-            if (position == otherPosition)
-            {
-                return true;
-            }
-        }
-    }
-
-    return false;
+    return CollisionSystem::hasMovementConflict(first, second);
 }
 void GameEngine::handleClick(int x, int y)
 {
@@ -243,16 +211,17 @@ void GameEngine::handleClick(int x, int y)
         return;
     }
 
-    if (!Board::isLegalMovePattern(
-            srcToken,
-            selectedPos.row,
-            selectedPos.col,
-            row,
-            col,
-            board.getHeight()))
     {
-        hasSelection = false;
-        return;
+        const auto movementStrategy = MovementStrategyFactory::create(srcToken);
+        if (!movementStrategy->isLegalMove(
+                currentBoard,
+                srcToken,
+                selectedPos,
+                {row, col}))
+        {
+            hasSelection = false;
+            return;
+        }
     }
 
     if (!PathValidator::isValidTarget(

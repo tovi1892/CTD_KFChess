@@ -3,19 +3,17 @@
 
 #include "Board.hpp"
 #include "BoardParser.hpp"
-#include "BoardFormatter.hpp"
+#include "BoardRenderer.hpp"
 #include "GameEngine.hpp"
-
+#include "GameLoop.hpp"
 
 int main()
 {
     std::ios::sync_with_stdio(false);
     std::cin.tie(nullptr);
 
-
     Board board;
-
-    auto result = BoardParser::parse(std::cin,board);
+    auto result = BoardParser::parse(std::cin, board);
 
 
     if(result == ParseResult::UnknownToken)
@@ -62,12 +60,14 @@ int main()
         }
 
 
-        else if(command=="wait")
+        else if (command == "wait")
         {
             long long ms;
 
-            if(ss>>ms)
-                engine.advanceTime(ms);
+            if (ss >> ms)
+            {
+                GameLoop::step(engine, ms);
+            }
         }
 
 
@@ -77,9 +77,9 @@ int main()
 
             ss>>boardWord;
 
-            if(boardWord=="board")
+            if (boardWord == "board")
             {
-                BoardFormatter::print(
+                BoardRenderer::print(
                     std::cout,
                     engine.getRenderedBoard()
                 );

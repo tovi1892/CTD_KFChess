@@ -4,13 +4,10 @@
 #include <ostream>
 
 
-class BoardFormatter {
-
+class BoardRenderer {
 public:
-
     static void print(
         std::ostream& output,
         const Board& board
     );
-
 };
